@@ -32,26 +32,47 @@ function makeNewGrade() {
   };
 }
 
-const numberOfGrades = 1000;
+const numberOfGrades = process.env.NUM_GRADES || 10;
 const restaurantId = '30075445';
 
-function pushIteree(cb) {
-
+function pushIteree(num, cb) {
+  let newGrade = makeNewGrade();
+  Restaurant.updateOne({
+    restaurant_id: restaurantId
+  }, {
+    $push: {
+      grades: newGrade
+    }
+  }).exec(cb);
 }
 
-function getSaveIteree(cb) {
-
+function getSaveIteree(num, cb) {
+  Restaurant.findOne({
+    restaurant_id: restaurantId
+  }).exec((err, restaurant) => {
+    if (err) {
+      return cb(err);
+    }
+    if (!restaurant) {
+      return cb(new Error('Restaurant not found'));
+    }
+    restaurant.grades.push(makeNewGrade());
+    restaurant.save(cb);
+  });
 }
 
 var iteree;
 
 if (process.env.PUSH) {
+  console.log('running with $push');
   iteree = pushIteree;
 } else {
+  console.log('running with get/save technique');
   iteree = getSaveIteree;
 }
 
 async.each(_.range(numberOfGrades), iteree, (err) => {
   console.log('Grades processed');
+  process.exit();
 });
 
